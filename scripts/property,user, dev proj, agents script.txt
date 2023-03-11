@@ -1,0 +1,613 @@
+#imports
+import requests
+import json
+import selenium
+import pandas as pd
+import random
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from datetime import datetime
+from faker import Faker
+from random import randint
+
+#headers
+HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36 Edg/106.0.1370.42'}
+
+
+
+page = 1
+
+
+#generating fake user data 
+
+if (page == 1):
+    gender = ['M','F']
+    l=[]
+
+    emails=[]
+
+    Faker.seed(32)
+    fake = Faker(locale='en_US')
+
+    for x in range(0,10):
+        e=fake.email()
+        e="'"+e+"'"
+        emails.append(e)
+        g=random.choice(gender)
+        if (g == 'M'):
+            n=fake.name_male()
+            n="'"+n+"'"
+        else:
+            n=fake.name_female()
+            n="'"+n+"'"
+        g="'"+g+"'"
+        u=fake.user_name()
+        u="'"+u+"'"
+        d=fake.date_between_dates(date_start=datetime(1950,1,1), date_end=datetime(2000,10,20))
+        #d="'"+str(d)+"'"
+        #d=str(d)
+        ad=fake.address()
+        ad = ad.replace("\n"," ")
+        ad = ad.replace(","," ;")
+        ad="'"+ad+"'"
+        l.append([u,n,g,ad,e,d]) 
+
+
+
+    df7 = pd.DataFrame(l)
+    df7.to_csv("user_test.csv", mode="a",sep=',', encoding='utf-8', index=False, header=False)
+
+    l2=[]
+
+    focus_areas = ['Sheikh Zayed', 'Giza','Heliopolis']
+    focus_areas2 = ['New Cairo','Nasr City']
+    for x in range(0,5):
+        l2.append([emails[x],"'"+random.choice(focus_areas)+"'"])
+        l2.append([emails[x],"'"+random.choice(focus_areas2)+"'"])
+
+    df8 = pd.DataFrame(l2)
+    df8.to_csv("user_focus_areas.csv", mode="a",sep=',', encoding='utf-8', index=False, header=False)
+
+
+
+#lists to hold the type for the properties
+IDS = []
+TYPES = []
+AREAS = []
+BEDROOMS = []
+BATHROOMS = []
+LISTED_DATES= []
+PRICES = []
+LOCATIONS = []
+DESCRIPTIONS = []
+AMENITIES = []
+AGENTS_NUMBERS = []
+
+#for agent table
+AGENTS = []
+COMPANIES = []
+
+#lists to hold the type for the devlopment projects
+DEVELOPMENT_PROJECTS_NAMES = []
+DEVELOPERS = []
+PROJECTS_LOCATIONS = []
+PROJECT_TYPES = []
+PROJECT_STARTING_PRICES =[]
+PROJECT_SIZE_MIN =[]
+PROJECT_SIZE_MAX =[]
+PROJECT_STATUS =[]
+
+
+#lists to use the ids, locations, and areas and phone numbers of agents 
+#of the first page properties to assign them random to feedback and shortlisted tables
+ID2=[]
+location2=[]
+area2=[]
+numbers2=[]
+
+
+
+#scraping the property data by going through the search page(sorted by the newest)
+#then opening each search result(25 per page)
+#then going to the next page through manipulating index in the url
+
+from datetime import datetime
+
+now = datetime.now()
+print(now)
+
+
+for x in range(page,312):
+    #print("page: ", page)
+    #search page and its reponse
+    search_page = "https://www.propertyfinder.eg/en/search?c=1&ob=nd&page="+str(x)+"&pt=3000000"
+    search_response = requests.get(search_page,headers=HEADERS)
+    soup_search = BeautifulSoup(search_response.text,'html.parser')
+    
+    #list to hold the search results links(25 property per page)
+    
+    urls=[]
+    
+    #manipulating the links to filter them to get only links for the 25 properties
+    
+    for link in soup_search.find_all("a"):
+        urls.append("https://www.propertyfinder.eg"+link.get('href'))
+        
+    del urls[0:32]
+    lg=len(urls)
+    del urls[25: lg]
+    lg=len(urls)
+    
+    responses=[]
+    soups=[]
+    i=0
+    #traversing through the 25 links we got from each search page to scrape
+    #using webdriver to open the each page and click on the call button 
+    #to get the updated HTML with the agent's phone number
+    
+    for url in urls:
+        res = requests.get(url,headers=HEADERS)
+        responses.append(res)
+        soups.append(BeautifulSoup(responses[i].text,'html.parser'))
+        i = i+1    
+    
+    #traversing through the soup of each property of the 25 properties per page
+   
+    for soup in soups:
+        
+        
+        
+        #getting the property ID and appending it to its list
+        
+        reference_no = soup.find_all("div", {"class": "property-page__legal-list-content"})[0].text
+        reference_no = "\'"+reference_no+"\'"
+        if (page == 1):
+            ID2.append(reference_no)
+        IDS.append(reference_no)
+        #print(reference_no)
+        
+        
+        
+        #getting the agent's phone number and appending it to its list
+        
+        #agent_phone_no = soup.find_all("a",{"class" : "text text--size4 text--bold property-contact__number"})[0].text
+        ser=soup.find_all("script" )
+        x=ser[len(ser)-3].string
+        text = x[x.index("window.propertyfinder.settings.property =")+len("window.propertyfinder.settings.property ="):x.index("window.propertyfinder.settings.search")]
+        text = text[text.index('payload:')+len('payload:'):text.rfind(';')]
+        text = text[0: text.rfind(',')]
+        w = json.loads(text)
+        agent_phone_no = w['data']['meta']['contact_options']['list']['phone']['value']
+        agent_phone_no = agent_phone_no.replace("+2", "")
+        lo="\'"+agent_phone_no+"\'"
+        AGENTS_NUMBERS.append(lo)
+        if (page == 1):
+            numbers2.append(lo)
+        #print(agent_phone_no)
+        
+        
+        
+        #getting the agent's broker company and appending it to its list
+        
+        br = soup.find_all("div",{"class" : "property-agent__position-broker-name"})[0].text.split('\n')
+        br = br[1].split()
+        broker_company_name=""
+        for x in br:
+            broker_company_name = broker_company_name + ' ' + x
+        COMPANIES.append(broker_company_name)
+        #print(broker_company)
+        
+        
+        #getting the number of attribute in the following div to check if the number
+        #of bedrooms and bathrooms is mentioned (attr number > 2 or 3) or not 
+        #(attr num) < 2 to avoid accessing element of the div out of the index
+        
+        no_of_attr = len(soup.find_all("div", {"class": "property-facts__value"}))
+        #print("no of attr: ", no_of_attr)
+        
+        #getting the property type and appending it to its list
+        
+        if (no_of_attr>0):
+            type = soup.find_all("div", {"class": "property-facts__value"})[0].text.split() 
+            if (len(type)>1):
+                type = type[0] + ' ' + type [1]
+            else:
+                type = type[0]
+            type = "\'"+type+"\'"
+        else:
+            type = None
+        TYPES.append(type)
+            #print(type)
+        
+        
+        #getting the property area and appending it to its list
+        if (no_of_attr>1):
+            ar = soup.find_all("div", {"class": "property-facts__value"})[1].text.split()
+            if (len(ar)>2):
+                area = ar[3]
+                area = area.replace(",","")
+                area = int(area)
+            else:
+                area = 0  
+        else:
+            area = 0
+        if (page == 1):
+            area2.append(area)
+        AREAS.append(area)
+            #print(area)
+        
+        
+        #getting the property number of bedrooms and appending it to its list
+        
+        if (no_of_attr>2):
+            bedrooms_no = soup.find_all("div", {"class": "property-facts__value"})[2].text.split()
+            if (len(bedrooms_no)>1 and bedrooms_no[0].isdecimal() == True):
+                bedrooms_no = int(bedrooms_no[0])+1 #check if there's a maid room, if yes, then the number + 1
+            else:
+                if(bedrooms_no[0].isdecimal() == False):
+                    bedrooms_no = 1
+                else:
+                    bedrooms_no = int(bedrooms_no[0])
+        else:
+            bedrooms_no = 0 
+        
+        BEDROOMS.append(bedrooms_no)
+            #print(bedrooms_no)
+            
+            
+        #getting the property number of bathrooms and appending it to its list
+        
+        if (no_of_attr>3):
+            bathrooms_no = soup.find_all("div", {"class": "property-facts__value"})[3].text.split()
+            if(bathrooms_no[0].isdecimal() == False):
+                bathrooms_no = bathrooms_no[0]
+                bathrooms_no = bathrooms_no.replace("+","")
+                bathrooms_no = int(bathrooms_no[0]) + 1
+            else:
+                bathrooms_no = int(bathrooms_no[0])
+            
+        else:
+            bathrooms_no = 0 
+        
+        BATHROOMS.append(bathrooms_no)
+            #print(bathrooms_no)
+        
+                
+        
+        #getting the property price and appending it to its list
+        
+        pr = soup.find_all("div", {"class": "property-price__price"})[0].text.split()
+        pr = pr[0].split(',')
+        price=""
+        for x in pr:
+            price = price  + x
+        
+        if (price.isdecimal() == False):
+            price=0          #+ ' '+ "EGP"
+        else:
+            price = int(price)
+        
+        
+        PRICES.append(price)
+        #print(price)
+        
+        
+        #getting the property location and appending it to its list
+        
+        location = soup.find_all("div",{"class" : "text text--size3 property-location__tower-name"})[0].text  
+        location = location + ' ' + soup.find_all("div",{"class" : "text text--size3"})[0].text
+        location = location.replace(",", " " )
+        location = "'" + location + "'"
+        if (page ==1):
+            location2.append(location)
+        LOCATIONS.append(location)
+        #print(location)
+        
+        
+        #getting the agent's name and appending it to its list
+        
+        agent_name = soup.find_all("h4",{"class" : "text text--size3 property-agent__name"})[0].text
+        AGENTS.append(agent_name)
+        #print(agent_name)
+        
+        
+        #getting the broker's name and appending it to its list
+        
+        broker_company = soup.find_all("div",{"class" : "property-agent__position-broker-name"})[0].text.split('\n')
+        broker_company = broker_company[1].split()
+        broker_company = " ".join(broker_company)
+        broker_company = '\''+broker_company+'\''
+        COMPANIES.append(broker_company_name)
+        #print(broker_company)
+        
+        
+        #getting the property description and appending it to its list
+        
+        description = soup.find_all("div",{"data-qs":"text-trimmer"})[0].text
+        description = description.replace("\n"," ")
+        description = description.replace(","," ;")
+        DESCRIPTIONS.append(description)
+        #print(description)
+        
+        
+        #checking if the property has amentities section and if so, getting the property amenities and appending it to its list
+        
+        if len(soup.find_all("div",{"class" : "property-amenities__list"})) != 0: 
+            amenities = ""
+            for x in soup.find_all("div",{"class" : "property-amenities__list"}):
+                amenities = amenities + x.text
+            amenities = amenities.split('          ')[2]
+            amenities = amenities.split('\n')
+            
+        else:
+            amenities = "NULL"
+        AMENITIES.append(amenities)
+        #print(amenities)
+        
+        
+        #checking if the property is part of development project and if so,
+        #getting the project name and appending it to its list
+
+       
+ 
+        if len(soup.find_all("div", {"class": "property-project-details__title"})) > 0:
+            project_name =soup.find_all("div", {"class": "property-project-details__title"})[0].text
+            project_name = "'"+project_name+"'"    
+            #print(project_name)
+        else:
+            project_name = "NULL"
+
+        DEVELOPMENT_PROJECTS_NAMES.append(project_name)
+
+        
+        if len(soup.find_all("div", {"class": "property-project-details__location"})) > 0:
+            project_location =soup.find_all("div", {"class": "property-project-details__location"})[0].text
+            project_location = project_location.replace(",","; ")
+            #print(project_location)
+        else:
+            project_location = "NULL"
+
+
+        PROJECTS_LOCATIONS.append(project_location)
+        
+
+        if len(soup.find_all("div", {"class": "property-project-details__developer-box-developed-by"})) > 0:
+            developer =soup.find_all("div", {"class": "property-project-details__developer-box-developed-by"})[0].next_element.next_element.next_element.text
+            developer = "'"+developer+"'"  
+            #print(developer)
+        else:
+            developer = "NULL"
+
+        DEVELOPERS.append(developer)
+
+
+
+        if len(soup.find_all("div", {"class": "property-project-details__list-item-value"})) > 0:
+            pr =soup.find_all("div", {"class": "property-project-details__list-item-value"})[0].text.split()
+            project_types=[]
+            for x in pr:
+                if (x!=","):
+                    x="'"+x+"'"
+                    project_types.append(x)
+
+            #print(project_types)
+        else:
+            project_types = "NULL"
+
+        PROJECT_TYPES.append(project_types)
+
+
+
+        if len(soup.find_all("div", {"class": "property-project-details__list-item-value"})) > 1:
+            t = soup.find_all("div", {"class": "property-project-details__list-item-value"})[1].text.split()
+            project_size_range = []
+            for x in t:
+                if(x!="-"):
+                    project_size_range.append(x)
+            min_size=int(project_size_range[0])
+            max_size=int(project_size_range[1])
+        else:
+            min_size=0
+            max_size=0
+        
+        PROJECT_SIZE_MIN.append(min_size)
+        PROJECT_SIZE_MAX.append(max_size)
+
+
+        if len(soup.find_all("div", {"class": "property-project-details__list-item-value"})) > 2:
+            t =soup.find_all("div", {"class": "property-project-details__list-item-value"})[2].text.split()
+            t = t[0]
+            t = t.split(',')
+            project_starting_price = ""
+            for x in t:
+                project_starting_price = project_starting_price + x
+                
+            if (project_starting_price.isdecimal() == False):
+                project_starting_price=0
+            else:
+                project_starting_price = int(project_starting_price)
+            #print(project_starting_price)
+        else:
+            project_starting_price = 0
+        
+        PROJECT_STARTING_PRICES.append(project_starting_price)
+
+
+
+        if len(soup.find_all("div", {"class": "property-project-details__list-item-value"})) > 3:
+            ps =soup.find_all("div", {"class": "property-project-details__list-item-value"})[3].text.split()
+            project_status=""
+            for x in ps:
+                project_status = project_status +x
+            project_status="'"+project_status+"'"
+            #print(project_status)
+        else:
+            project_status = "NULL"
+        
+        PROJECT_STATUS.append(project_status)
+        
+       
+
+    del responses
+    del urls
+    del soups
+    
+    
+    #to replace the none value in the project names with null to be accepted in mysql
+    
+    
+    #creating list to concatenate the attributes for each table then creating a dataframe out of them and exporting it as csv file
+    
+    
+    prop=[]
+    for x in range(0,len(IDS)):
+        dupli = False
+        for y in range(0,x):
+            if ((IDS[x] == IDS[y] and AREAS[x] == AREAS[y] and LOCATIONS[x] == LOCATIONS[y])or (AREAS[x] ==0)):
+                dupli = True
+        if(dupli == False):
+            prop.append([IDS[x],AREAS[x],LOCATIONS[x], TYPES[x], BEDROOMS[x], BATHROOMS[x],LISTED_DATES[x],PRICES[x],AGENTS_NUMBERS[x],DEVELOPMENT_PROJECTS_NAMES[x],"\'"+DESCRIPTIONS[x]+"\'"]) 
+        #,DESCRIPTIONS[x]
+    df1 = pd.DataFrame(prop)
+    df1.to_csv("prop_test.csv", mode="a",sep=',', encoding='utf-8', index=False, header=True)
+    
+    amen=[]
+    for x in range(0,len(IDS)):
+        dupli = False
+        for y in range(0,x):
+            if ((IDS[x] == IDS[y] and AREAS[x] == AREAS[y] and LOCATIONS[x] == LOCATIONS[y])or (AREAS[x] ==0)):
+                dupli = True
+        if(dupli == False):
+            if (AMENITIES[x] != "NULL"):
+                for w in range(0,len(AMENITIES[x])):
+                    amen.append([IDS[x],LOCATIONS[x],AREAS[x],AMENITIES[x][w]]) 
+        
+    df2 = pd.DataFrame(amen)
+    df2.to_csv("prop_amen.csv", mode="a",sep=',', encoding='utf-8', index=False, header=True)
+    
+    ag=[]
+    for x in range(0,len(AGENTS_NUMBERS)):
+        dupli = False
+        for y in range(0,x): 
+            if (AGENTS_NUMBERS[x] == AGENTS_NUMBERS[y]):
+                dupli = True
+        if(dupli == False):
+            ag.append([AGENTS[x],AGENTS_NUMBERS[x]]) 
+        
+    df3 = pd.DataFrame(ag)
+    df3.to_csv("agents.csv", mode="a",sep=',', encoding='utf-8', index=False, header=True)
+    
+    work_for=[]
+    for x in range(0,len(AGENTS_NUMBERS)):
+        dupli = False
+        for y in range(0,x): 
+            if (AGENTS_NUMBERS[x] == AGENTS_NUMBERS[y] and COMPANIES[x] == COMPANIES[y]):
+                dupli = True
+        if(dupli == False):
+            l = COMPANIES[x].split()
+            l =" ".join(l)
+            l = '\''+l+'\''
+            work_for.append([AGENTS_NUMBERS[x],l]) 
+        
+    df4 = pd.DataFrame(work_for)
+    df4.to_csv("work_for.csv", mode="a",sep=',', encoding='utf-8', index=False, header=True)
+    
+    dev_proj=[]
+    for x in range(0,len(DEVELOPMENT_PROJECTS_NAMES)):
+        dupli = False
+        for y in range(0,x): 
+            if (DEVELOPMENT_PROJECTS_NAMES[x] == DEVELOPMENT_PROJECTS_NAMES[y] and DEVELOPMENT_PROJECTS_NAMES[x] != None):
+                dupli = True
+        if(dupli == False and x!=0):
+            dev_proj.append([DEVELOPMENT_PROJECTS_NAMES[x],DEVELOPERS[x],PROJECTS_LOCATIONS[x],PROJECT_STARTING_PRICES[x],PROJECT_SIZE_MIN[x],PROJECT_SIZE_MAX[x],PROJECT_STATUS[x]]) 
+        
+    df5 = pd.DataFrame(dev_proj)
+    df5.to_csv("dev_proj.csv", mode="a",sep=',', encoding='utf-8', index=False, header=True)
+    
+    proj_types=[]
+    for x in range(0,len(DEVELOPMENT_PROJECTS_NAMES)):
+        dupli = False
+        for y in range(0,x):
+            if (DEVELOPMENT_PROJECTS_NAMES[x] == DEVELOPMENT_PROJECTS_NAMES[y] and DEVELOPMENT_PROJECTS_NAMES[x] != None):
+                dupli = True
+        if(dupli == False):
+            if (PROJECT_TYPES[x] != "NULL"):
+                for w in range(0,len(PROJECT_TYPES[x])):
+                    proj_types.append([DEVELOPMENT_PROJECTS_NAMES[x],PROJECT_TYPES[x][w]]) 
+        
+    df6 = pd.DataFrame(proj_types)
+    df6.to_csv("proj_types.csv", mode="a",sep=',', encoding='utf-8', index=False, header=True)
+    
+    
+    
+    #clearing the list to save memory after each page 
+    
+    IDS.clear()
+    TYPES.clear()
+    AREAS.clear()
+    BEDROOMS.clear()
+    BATHROOMS.clear()
+    LISTED_DATES.clear()
+    PRICES.clear()
+    LOCATIONS.clear()
+    AGENTS.clear()
+    COMPANIES.clear()
+    DESCRIPTIONS.clear()
+    AMENITIES.clear()
+    AGENTS_NUMBERS.clear()
+    AGENTS.clear()
+    COMPANIES.clear()
+    DEVELOPMENT_PROJECTS_NAMES.clear()
+    DEVELOPERS.clear()
+    PROJECTS_LOCATIONS.clear()
+    PROJECT_TYPES.clear()
+    PROJECT_STARTING_PRICES.clear()
+    PROJECT_SIZE_MIN.clear()
+    PROJECT_SIZE_MAX.clear()
+    PROJECT_STATUS.clear()
+
+    
+    #creating the fake data needed for shortlisting properties and giving feedbacks to agents
+    
+    if (page == 1):
+
+        l3=[]
+
+        for x in range(0,5):
+            for y in range(x,x+2):
+                l3.append([ID2[x],location2[x],area2[x],emails[y]])
+
+        df9 = pd.DataFrame(l3)
+        df9.to_csv("shortlisted.csv", mode="a",sep=',', encoding='utf-8', index=False, header=False)
+
+
+
+
+        def random_with_N_digits(n):
+            range_start = 10**(n-1)
+            range_end = (10**n)-1
+            return randint(range_start, range_end)
+
+        Faker.seed(13)
+
+        fake= Faker(locale='en_US')
+        fake_feedback=[]
+        for x in range(10):
+            fake_feedback.append([numbers2[x],emails[x],fake.date_between_dates(date_start=datetime(2022,10,1), date_end=datetime(2022,10,20)),random_with_N_digits(1),fake.paragraph()])
+
+        df10 = pd.DataFrame(fake_feedback)
+        df10.to_csv("feedback.csv", mode="a",sep=',', encoding='utf-8', index=False, header=False)
+
+
+
+
+    #print(page)
+    page = page +1
+    
+    
+    
+    
+    
+   

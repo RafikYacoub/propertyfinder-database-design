@@ -1,0 +1,16 @@
+Rafik E. Yacoub
+900194127
+List of Design Assumptions used in database project, milestone 1
+
+
+1. Every agent works for only one broker company.
+2. The primary key for the broker company is the name since the email cannot be accessed from the website.
+3. Every development project name is unique. If the project has a developer, it will be recorded.
+4. There is a unique ID for every property which works as its primary key.
+5. Every email address is unique, and it's the primary key in the user and agent entities.
+6. All prices are in EGP.
+7. Every development project name is unique.
+8. If no explicit agent is selling the property, the broker company will have an agent by its name (broker company name 
+agent eg el rewad agent which works in el rewad real estate company) to sell the property under its name.
+
+Note: The above assumptions are open to being updated (if needed) in future milestones.

@@ -1,0 +1,87 @@
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/work_for_filtered.csv'
+INTO TABLE work_for
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(agent_phone_number,broker_company_name);
+
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/agents_filtered.csv'
+INTO TABLE agent
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(name,phone_no);
+
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/dev_proj_filtered.csv'
+INTO TABLE development_project
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(name,location,developer,size_range_min,size_range_min,starting_price,completion_status);
+
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/proj_types_filtered.csv'
+INTO TABLE development_project_types
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(project_name,properties_types);
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/prop_test_filtered2.csv'
+INTO TABLE property
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(ID,area,location,type,bedrooms_number,bathrooms_number,price,agent_phone_no,@vone,@Vtwo)
+SET  
+development_project_name = NULLIF(@vone,'NULL'),
+description = NULLIF(@vtwo,'NULL\r');
+
+
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/prop_amen_filtered.csv'
+INTO TABLE property_amenities
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(property_ID,property_location,property_area,amenity);
+select * from property_amenities;
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/user_test.csv'
+INTO TABLE user
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(username,name,gender,address,email,date_of_birth);
+
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/user_focus_areas.csv'
+INTO TABLE user_focus_areas
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(user_email,focus_areas);
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/csv/broker_company_csv_files/company_test.csv'
+INTO TABLE broker_company
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(name, phone_no, active_listing, location, @vfive)
+SET description = NULLIF(@vfive,'null\r')
+;
+
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/shortlisted.csv'
+INTO TABLE shortlisted
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+;
+
+LOAD DATA INFILE 'D:/Uni/fall 2022/database/project/MS2/feedback.csv'
+INTO TABLE provide_feedback
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+;
+

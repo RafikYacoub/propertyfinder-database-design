@@ -1,0 +1,101 @@
+#lists to hold the type for the broker companies
+COMPANY_NAMES = []
+ACTIVE_LISTING = []
+COMPANY_ABOUT = []
+COMPANY_ADDRESS = []
+COMPANY_NUMBERS =[]
+
+from datetime import datetime
+
+
+page =37
+for x in range(1,page):
+    
+    broker_page = "https://www.propertyfinder.eg/en/find-broker/search?page="+ str(x)
+    broker_response = requests.get(broker_page,headers=HEADERS)
+    soup_broker = BeautifulSoup(broker_response.text,'html.parser')
+    urls=[]
+    
+    for link in soup_broker.findAll('a'):
+        urls.append("https://www.propertyfinder.eg"+link.get('href'))
+
+    del urls[0:16]
+    lg=len(urls)
+    del urls[18: lg]
+
+
+    
+    responses=[]
+    soups=[]
+    i=0
+    for url in urls:
+        res=requests.get(url,headers=HEADERS)
+        responses.append(res.text)
+        soups.append(BeautifulSoup(responses[i],'html.parser'))
+        i = i+1
+    
+    
+    for soup in soups:
+        company_name = soup.find_all("h1",{"class":"title title--size1 title--bottom-space2 bio-info__name"})[0].text
+        company_name ="'"+ company_name+"'"
+        COMPANY_NAMES.append(company_name)
+        print(company_name) 
+        
+        active_listing = soup.find_all("a",{"class":"link"},{"href":"#tab-properties"})[1].text.split()
+        al= active_listing[0].split(',')
+        if (len(al)>1):
+            active_listing=""
+            for x in range(0,len(al)):
+                active_listing = active_listing +al[x]
+        else:
+            active_listing = al[0]
+        active_listing = int(active_listing)
+        ACTIVE_LISTING.append(active_listing)
+        #print(active_listing)
+        
+        company_address = soup.find_all("span",{"class":"table__column"})[3].text
+        company_address = company_address.replace(","," ;")
+        company_address = company_address.replace("\r"," ")
+        company_address = company_address.replace("\n"," ;")
+        company_address ="'"+ company_address+"'"
+        COMPANY_ADDRESS.append(company_address)
+        #print(company_address) 
+        
+        about=soup.find_all("p",{"data-qs":"text-trimmer"})
+        for x in range (0,len(about)):
+            description = about[x].text
+            if len(description) == 0:
+                description = "NULL"
+            else: 
+                description = description.replace("\r"," ")
+                description = description.replace("\n"," ")
+                #description = description.split("\n")
+                description = description.replace(","," ;")
+                description ="'"+ description+"'"
+                #print(description)
+            
+            COMPANY_ABOUT.append(description)
+            #print (description)
+        
+        broker_number = soup.find_all("span", {"class": "button__text button__text-value button__phone-ltr button__text--is-hidden"})[0].text
+        broker_number ="'"+ broker_number+"'"
+        COMPANY_NUMBERS.append(broker_number)
+        #print(broker_number)
+        
+        
+    company_data=[] #{"Company names","numbers"}
+    for x in range(0,len(COMPANY_NUMBERS)):
+            company_data.append([COMPANY_NAMES[x],COMPANY_NUMBERS[x],ACTIVE_LISTING[x],COMPANY_ADDRESS[x],COMPANY_ABOUT[x]])
+    df = pd.DataFrame(company_data)
+    df.to_csv("company_test.csv",mode="a",sep=',', encoding='utf-8', index=False, header=False)
+    
+    #print(page)
+    page = page +1
+    
+    COMPANY_NAMES.clear()
+    ACTIVE_LISTING.clear()
+    COMPANY_ABOUT.clear()
+    COMPANY_ADDRESS.clear()
+    COMPANY_NUMBERS.clear()
+            
+    

@@ -1,0 +1,102 @@
+create database if not exists property_finder;
+
+use property_finder;
+
+create table user (
+email varchar(40) not null primary key,
+username varchar(20) not null,
+name varchar(20) not null,
+address varchar(100),
+gender char,
+date_of_birth date
+);
+
+create table user_focus_areas (
+user_email varchar(40) not null,
+focus_areas varchar(20) not null,
+primary key (user_email, focus_areas),
+FOREIGN KEY(user_email) REFERENCES user(email) 
+on delete cascade on update cascade
+);
+
+create table development_project (
+name varchar(40) not null primary key,
+location varchar(100) not null,
+properties_type varchar(20) not null,
+developer varchar(40),
+size_range varchar(15) not null,
+starting_price decimal(10,4) not null,
+completion_status  varchar(15) not null
+);
+
+
+create table broker_company(
+name varchar(40) not null primary key,
+location varchar(100) not null,
+description varchar(6000),
+address varchar(50) not null,
+phone_no varchar(15) not null
+);
+
+create table agent(
+name varchar(25) not null,
+phone_no varchar(15) not null primary key,
+broker_company_name varchar(40) not null,
+FOREIGN KEY(broker_company_name) REFERENCES broker_company(name) 
+on delete cascade on update cascade 
+);
+
+create table provide_feedback (
+agent_phone_no varchar(40) not null,
+user_email varchar(40) not null,
+feedback_date date not null,
+rate integer not null CHECK (rate >= 0 AND rate <= 10),
+review varchar(1000) not null,
+primary key (user_email, agent_phone_no, feedback_date),
+FOREIGN KEY(user_email) REFERENCES user(email) 
+on delete cascade on update cascade,
+FOREIGN KEY(agent_phone_no) REFERENCES agent(phone_no) 
+on delete cascade on update cascade
+);
+
+create table property(
+ID varchar(20) not null primary key,
+location varchar(200) not null,
+type varchar(15) not null,
+bedrooms_number varchar (10) not null, #as some are written-> number of bedrooms: 4 + maid
+bathrooms_number varchar(10) not null,
+listing_date date not null,
+agent_phone_no varchar(15) not null,
+development_project_name varchar(40),
+description varchar(6000),
+
+FOREIGN KEY(development_project_name) REFERENCES development_project(name) 
+on delete cascade on update cascade,
+FOREIGN KEY(agent_phone_no) REFERENCES agent(phone_no) 
+on delete cascade on update cascade
+);
+
+
+create table property_amenities
+(
+property_ID varchar(20) not null,
+amenity varchar(40) not null,
+
+primary key (property_ID,amenity),
+
+FOREIGN KEY (property_ID) REFERENCES property(ID)
+on delete cascade on update cascade
+);
+
+create table shortlisted
+(
+property_ID varchar(20) not null,
+user_email varchar(40) not null,
+
+primary key (user_email,property_ID),
+
+FOREIGN KEY (property_ID) REFERENCES property(ID)
+on delete cascade on update cascade,
+FOREIGN KEY (user_email) REFERENCES user(email)
+on delete cascade on update cascade
+);
